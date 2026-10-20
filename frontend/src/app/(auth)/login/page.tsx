@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [alert, setAlert] = useState('');
   const [registerOpen, setRegisterOpen] = useState(false);
 
-  const { control, handleSubmit, formState: { isSubmitting } } = useForm<LoginForm>({
+  const { control, handleSubmit, setValue, formState: { isSubmitting } } = useForm<LoginForm>({
     defaultValues: { username: '', password: '', remember: true },
   });
 

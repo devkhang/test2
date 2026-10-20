@@ -158,6 +158,15 @@
     "back": "Trở về",
     "confirm": "Xác nhận",
     "cancel": "Huỷ bỏ",
-    "success": "Đăng ký thành công. Đăng nhập bằng mã số thuế"
+    "success": "Đăng ký thành công. Đăng nhập bằng mã số thuế",
+    "accountTitle": "Thông tin tài khoản",
+    "accountCreated": "Tài khoản doanh nghiệp đã được tạo thành công",
+    "tempPassword": "Mật khẩu tạm thời",
+    "passwordSentTo": "Mật khẩu tạm thời cũng đã được gửi tới email",
+    "changePasswordHint": "Vui lòng đổi mật khẩu sau lần đăng nhập đầu tiên.",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "close": "Đóng",
+    "loginNow": "Đăng nhập ngay"
   }
 }

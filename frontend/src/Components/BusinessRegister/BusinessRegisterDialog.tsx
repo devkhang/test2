@@ -92,9 +92,8 @@ export default function BusinessRegisterDialog({ open, onClose, onRegistered }: 
     try {
       const res = await businessApi.register({ ...form.getValues(), ...files, verifyToken });
       if (!res.success) return setError(translateError(res.code));
-      enqueueSnackbar(t('success'), { variant: 'success' });
-      onRegistered?.(res.data.username);
       setAccount(res.data);
+      enqueueSnackbar(t('success'), { variant: 'success' });
       close();
     } catch (err) {
       setError(translateError(getErrorCode(err)));

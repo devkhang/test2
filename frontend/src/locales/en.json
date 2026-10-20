@@ -158,6 +158,15 @@
     "back": "Back",
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "success": "Registration complete. Log in with your tax code"
+    "success": "Registration complete. Log in with your tax code",
+    "accountTitle": "Account information",
+    "accountCreated": "Your business account has been created",
+    "tempPassword": "Temporary password",
+    "passwordSentTo": "The temporary password has also been sent to",
+    "changePasswordHint": "Please change your password after your first login.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "loginNow": "Log in now"
   }
 }
