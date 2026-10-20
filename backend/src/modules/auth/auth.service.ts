@@ -382,7 +382,7 @@ export class AuthService {
         <table width="560" cellpadding="0" cellspacing="0"
                style="max-width:560px;background-color:#ffffff;border-radius:8px;padding:28px 32px;">
           <tr>
-            <td style="padding-bottom:20px;">${logo.html}</td>
+            <td align="center" style="padding-bottom:20px;text-align:center;">${logo.html}</td>
           </tr>
           <tr>
             <td style="color:#111827;font-size:20px;font-weight:700;padding-bottom:16px;">

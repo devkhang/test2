@@ -50,7 +50,7 @@ export class MailService {
     const contentType = IMAGE_TYPES[extname(path).toLowerCase()];
     if (contentType && existsSync(path)) {
       return {
-        html: `<img src="cid:${LOGO_CID}" alt="${this.appName}" height="${height}" style="display:block;height:${height}px;" />`,
+        html: `<img src="cid:${LOGO_CID}" alt="${this.appName}" height="${height}" style="display:block;margin:0 auto;height:${height}px;" />`,
         // inline + contentType rõ ràng: ảnh hiện trong nội dung, không bị liệt kê thành tệp đính kèm
         attachments: [{ filename: basename(path), path, cid: LOGO_CID, contentType, contentDisposition: 'inline' }],
       };
@@ -58,7 +58,7 @@ export class MailService {
     const url = this.configService.get<string>('MAIL_LOGO_URL');
     if (url) {
       return {
-        html: `<img src="${url}" alt="${this.appName}" height="${height}" style="display:block;height:${height}px;" />`,
+        html: `<img src="${url}" alt="${this.appName}" height="${height}" style="display:block;margin:0 auto;height:${height}px;" />`,
         attachments: [],
       };
     }
