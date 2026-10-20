@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
-import * as argon2 from 'argon2';
+import * as argon2 from '@node-rs/argon2';
 import * as crypto from 'crypto';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';

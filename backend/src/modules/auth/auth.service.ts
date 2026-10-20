@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as argon2 from 'argon2';
+import * as argon2 from '@node-rs/argon2';
 import * as crypto from 'crypto';
 import { UserService } from '../user/user.service.js';
 import { MailService } from '../../commons/mail/mail.service.js';
