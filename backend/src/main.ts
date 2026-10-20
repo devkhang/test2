@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
+import { ACCESS_TOKEN_COOKIE } from './modules/auth/auth-cookie.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -9,7 +11,10 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS
+  // Đọc cookie httpOnly chứa JWT
+  app.use(cookieParser());
+
+  // CORS – credentials: true để trình duyệt gửi cookie từ frontend
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3001',
     credentials: true,
@@ -32,15 +37,8 @@ async function bootstrap() {
     .setTitle('Hệ thống Quản lý Lao động – API Documentation')
 
     .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Dán trực tiếp mã accessToken vào đây (không cần gõ chữ "Bearer")',
-      },
-      'bearer',
-    )
+    // Đăng nhập qua POST /auth/login ngay trên Swagger: trình duyệt tự lưu và gửi cookie
+    .addCookieAuth(ACCESS_TOKEN_COOKIE)
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

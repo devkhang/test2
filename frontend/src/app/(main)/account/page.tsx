@@ -23,7 +23,7 @@ const GENDERS: Option[] = [
 // (tên tỉnh/phường lấy từ API nên không cần dịch, đặt translateLabels = false)
 const PROVINCES: Option[] = [];
 const WARDS: Option[] = [];
-const ROLE_KEYS: Record<number, string> = { 1: 'account.roleAdmin' };
+const ROLE_KEYS: Record<number, string> = { 1: 'account.roleAdmin', 2: 'account.roleEnterprise' };
 
 const EMPTY: Form = { fullName: '', dob: '', gender: '', phoneNumber: '', title: '', avatarUrl: '', provinceId: '', wardId: '', address: '' };
 

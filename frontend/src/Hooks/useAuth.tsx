@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Mở app: JS không đọc được cookie httpOnly → luôn hỏi server user là ai
   useEffect(() => {
     authApi.me()
-      .then((u) => setUser(u))
+      .then((res) => setUser(res.data))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

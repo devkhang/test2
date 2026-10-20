@@ -11,7 +11,7 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
+  ApiCookieAuth,
 } from '@nestjs/swagger';
 import { UserService } from './user.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../../commons/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../commons/decorators/current-user.decorator.js';
 
 @ApiTags('Users – Người dùng')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {

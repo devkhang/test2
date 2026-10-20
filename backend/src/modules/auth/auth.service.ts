@@ -9,8 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
-import * as nodemailer from 'nodemailer';
 import { UserService } from '../user/user.service.js';
+import { MailService } from '../../commons/mail/mail.service.js';
 import {
   LoginDto,
   ChangePasswordDto,
@@ -30,6 +30,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) { }
 
   // ─── 1. ĐĂNG NHẬP ───────────────────────────────────────────────────────────
@@ -37,16 +38,18 @@ export class AuthService {
     const user = await this.userService.findByUsername(dto.username);
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException(
-        'Tài khoản hoặc mật khẩu không đúng. Xin vui lòng thử lại.',
-      );
+      throw new UnauthorizedException({
+        code: 'WRONG_PASSWORD',
+        message: 'Tài khoản hoặc mật khẩu không đúng. Xin vui lòng thử lại.',
+      });
     }
 
     const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        'Tài khoản hoặc mật khẩu không đúng. Xin vui lòng thử lại.',
-      );
+      throw new UnauthorizedException({
+        code: 'WRONG_PASSWORD',
+        message: 'Tài khoản hoặc mật khẩu không đúng. Xin vui lòng thử lại.',
+      });
     }
 
     const payload: JwtPayload = {
@@ -76,7 +79,7 @@ export class AuthService {
   }
 
   // ─── 2. ĐĂNG XUẤT ───────────────────────────────────────────────────────────
-  async logout(_userId: number) {
+  async logout() {
     return {
       message: 'Đăng xuất thành công.',
       action: 'CLEAR_TOKEN',
@@ -85,15 +88,16 @@ export class AuthService {
 
   // ─── 3. ĐỔI MẬT KHẨU (khi đã đăng nhập) ────────────────────────────────────
   async changePassword(userId: number, dto: ChangePasswordDto) {
-    const currentPass = dto.currentPassword;
+    const currentPass = dto.currentPassword ?? dto.oldPassword;
     if (!currentPass) {
       throw new BadRequestException('Mật khẩu hiện tại không được để trống');
     }
 
-    if (dto.newPassword !== dto.confirmNewPassword) {
-      throw new BadRequestException(
-        'Mật khẩu mới và xác nhận mật khẩu không khớp',
-      );
+    if (dto.confirmNewPassword !== undefined && dto.newPassword !== dto.confirmNewPassword) {
+      throw new BadRequestException({
+        code: 'PASSWORD_MISMATCH',
+        message: 'Mật khẩu mới và xác nhận mật khẩu không khớp',
+      });
     }
 
     const user = await this.userService.findOneOrFail({ where: { id: userId } });
@@ -103,14 +107,18 @@ export class AuthService {
       currentPass,
     );
     if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+      throw new BadRequestException({
+        code: 'WRONG_OLD_PASSWORD',
+        message: 'Mật khẩu hiện tại không đúng',
+      });
     }
 
     const isSamePassword = await argon2.verify(user.passwordHash, dto.newPassword);
     if (isSamePassword) {
-      throw new BadRequestException(
-        'Mật khẩu mới không được trùng mật khẩu hiện tại',
-      );
+      throw new BadRequestException({
+        code: 'SAME_PASSWORD',
+        message: 'Mật khẩu mới không được trùng mật khẩu hiện tại',
+      });
     }
 
     const newPasswordHash = await argon2.hash(dto.newPassword);
@@ -135,9 +143,10 @@ export class AuthService {
 
     // Theo nghiệp vụ: thông báo rõ ràng nếu email chưa đăng ký
     if (!user || !user.isActive) {
-      throw new NotFoundException(
-        'Email chưa được đăng ký. Xin vui lòng thử lại.',
-      );
+      throw new NotFoundException({
+        code: 'EMAIL_NOT_FOUND',
+        message: 'Email chưa được đăng ký. Xin vui lòng thử lại.',
+      });
     }
 
     // Sinh OTP 6 chữ số và tính thời gian hết hạn
@@ -163,25 +172,28 @@ export class AuthService {
 
   // ─── 4b. QUÊN MẬT KHẨU – BƯỚC 2: Xác nhận OTP + Đặt mật khẩu mới ──────────
   async resetPasswordWithOtp(dto: ResetPasswordDto) {
-    if (dto.newPassword !== dto.confirmNewPassword) {
-      throw new BadRequestException(
-        'Mật khẩu mới và xác nhận mật khẩu không khớp',
-      );
+    if (dto.confirmNewPassword !== undefined && dto.newPassword !== dto.confirmNewPassword) {
+      throw new BadRequestException({
+        code: 'PASSWORD_MISMATCH',
+        message: 'Mật khẩu mới và xác nhận mật khẩu không khớp',
+      });
     }
 
     const user = await this.userService.findByEmail(dto.email);
 
     if (!user || !user.isActive) {
-      throw new NotFoundException(
-        'Email chưa được đăng ký. Xin vui lòng thử lại.',
-      );
+      throw new NotFoundException({
+        code: 'EMAIL_NOT_FOUND',
+        message: 'Email chưa được đăng ký. Xin vui lòng thử lại.',
+      });
     }
 
     // Kiểm tra OTP tồn tại
     if (!user.resetPasswordToken || !user.resetPasswordExpires) {
-      throw new BadRequestException(
-        'Chưa có yêu cầu khôi phục mật khẩu. Vui lòng bắt đầu lại.',
-      );
+      throw new BadRequestException({
+        code: 'OTP_NOT_REQUESTED',
+        message: 'Chưa có yêu cầu khôi phục mật khẩu. Vui lòng bắt đầu lại.',
+      });
     }
 
     // Kiểm tra OTP hết hạn
@@ -191,14 +203,18 @@ export class AuthService {
         resetPasswordToken: null,
         resetPasswordExpires: null,
       } as any);
-      throw new BadRequestException(
-        `Mã OTP đã hết hạn sau ${OTP_EXPIRY_MINUTES} phút. Vui lòng yêu cầu mã mới.`,
-      );
+      throw new BadRequestException({
+        code: 'OTP_EXPIRED',
+        message: `Mã OTP đã hết hạn sau ${OTP_EXPIRY_MINUTES} phút. Vui lòng yêu cầu mã mới.`,
+      });
     }
 
     // Kiểm tra OTP khớp
     if (user.resetPasswordToken !== dto.otp) {
-      throw new BadRequestException('Mã OTP không đúng. Vui lòng kiểm tra lại.');
+      throw new BadRequestException({
+        code: 'OTP_INVALID',
+        message: 'Mã OTP không đúng. Vui lòng kiểm tra lại.',
+      });
     }
 
     const newPasswordHash = await argon2.hash(dto.newPassword);
@@ -331,17 +347,6 @@ export class AuthService {
     return `${masked}@${domain}`;
   }
 
-  private getMailTransporter() {
-    return nodemailer.createTransport({
-      host: this.configService.get<string>('MAIL_HOST', 'smtp.gmail.com'),
-      port: Number(this.configService.get('MAIL_PORT', 587)),
-      secure: false,
-      auth: {
-        user: this.configService.get<string>('MAIL_USER'),
-        pass: this.configService.get<string>('MAIL_PASS'),
-      },
-    });
-  }
 
   /**
    * Email quên mật khẩu – gửi OTP
@@ -353,7 +358,6 @@ export class AuthService {
     fullName: string,
     otp: string,
   ): Promise<void> {
-    const transporter = this.getMailTransporter();
     const appName = this.configService.get<string>('APP_NAME', 'Hệ thống Quản lý Lao động');
     const logoUrl = this.configService.get<string>(
       'MAIL_LOGO_URL',
@@ -368,10 +372,10 @@ export class AuthService {
       timeZone: 'Asia/Ho_Chi_Minh',
     });
 
-    await transporter.sendMail({
-      from: `"${appName}" <${this.configService.get<string>('MAIL_USER')}>`,
+    await this.mailService.send({
       to: email,
       subject: `[${appName}] Mã xác thực khôi phục mật khẩu`,
+      devPreview: `OTP: ${otp}`,
       html: `
 <!DOCTYPE html>
 <html lang="vi">
@@ -503,7 +507,6 @@ export class AuthService {
     fullName: string,
     otp: string,
   ): Promise<void> {
-    const transporter = this.getMailTransporter();
     const appName = this.configService.get<string>('APP_NAME', 'Hệ thống Quản lý Lao động');
     const logoUrl = this.configService.get<string>(
       'MAIL_LOGO_URL',
@@ -511,10 +514,10 @@ export class AuthService {
     );
     const expiryText = `${OTP_EXPIRY_MINUTES} phút`;
 
-    await transporter.sendMail({
-      from: `"${appName}" <${this.configService.get<string>('MAIL_USER')}>`,
+    await this.mailService.send({
       to: email,
       subject: `[${appName}] Mã xác thực thay đổi địa chỉ Email`,
+      devPreview: `OTP: ${otp}`,
       html: `
 <!DOCTYPE html>
 <html lang="vi">

@@ -5,7 +5,6 @@ import {
   IsInt,
   Min,
   Max,
-  IsPhoneNumber,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';

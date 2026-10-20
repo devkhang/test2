@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../../user/user.service.js';
+import { readAuthCookie } from '../auth-cookie.js';
 
 export interface JwtPayload {
   sub: number;
@@ -18,13 +19,22 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly userService: UserService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Ưu tiên cookie httpOnly (frontend); vẫn nhận header Bearer cho Postman/công cụ khác
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        readAuthCookie,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET', 'default-secret-change-me'),
     });
   }
 
   async validate(payload: JwtPayload) {
+    // Token không mang id user hợp lệ (vd. token dùng cho mục đích khác) → từ chối
+    if (!Number.isInteger(payload.sub)) {
+      throw new UnauthorizedException('Phiên đăng nhập không hợp lệ');
+    }
+
     const user = await this.userService.findOne({
       where: { id: payload.sub },
     });

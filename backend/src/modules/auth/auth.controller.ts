@@ -5,12 +5,14 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
+  ApiCookieAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
 import {
@@ -24,6 +26,7 @@ import {
 import { Public } from '../../commons/decorators/public.decorator.js';
 import { CurrentUser } from '../../commons/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../commons/guards/jwt-auth.guard.js';
+import { setAuthCookie, clearAuthCookie } from './auth-cookie.js';
 
 @ApiTags('Auth – Xác thực')
 @Controller('auth')
@@ -36,17 +39,16 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Đăng nhập hệ thống',
-    description: 'Xác thực tài khoản và trả về JWT Bearer token cùng thông tin người dùng.',
+    description: 'Xác thực tài khoản, đặt JWT vào cookie httpOnly `access_token` và trả về thông tin người dùng.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Đăng nhập thành công. Trả về accessToken và thông tin user.',
+    description: 'Đăng nhập thành công. Cookie `access_token` được set; body chứa thông tin user.',
     schema: {
       example: {
         statusCode: 200,
         message: 'Thành công',
         data: {
-          accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJyb2xlSWQiOjF9...',
           expiresIn: '8h',
           user: {
             id: 1,
@@ -85,18 +87,20 @@ export class AuthController {
       },
     },
   })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const { accessToken, ...result } = await this.authService.login(dto);
+    setAuthCookie(res, accessToken, dto.rememberMe);
+    return result;
   }
 
   // ─── 2. ĐĂNG XUẤT ─────────────────────────────────────────────────────────
-  @UseGuards(JwtAuthGuard)
+  // Public: cookie hết hạn vẫn phải xoá được
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Đăng xuất',
-    description: 'Yêu cầu token JWT hợp lệ. Trả về action CLEAR_TOKEN để client xóa token.',
+    description: 'Xoá cookie `access_token`. Không yêu cầu token còn hạn.',
   })
   @ApiResponse({
     status: 200,
@@ -112,32 +116,21 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Chưa xác thực hoặc token không hợp lệ.',
-    schema: {
-      example: {
-        statusCode: 401,
-        message: 'Bạn cần đăng nhập để thực hiện thao tác này',
-        timestamp: '2026-10-18T16:00:00.000Z',
-        path: '/api/v1/auth/logout',
-      },
-    },
-  })
-  logout(@CurrentUser() user: { id: number }) {
-    return this.authService.logout(user.id);
+  logout(@Res({ passthrough: true }) res: Response) {
+    clearAuthCookie(res);
+    return this.authService.logout();
   }
 
   // ─── 3. ĐỔI MẬT KHẨU (khi đã đăng nhập) ─────────────────────────────────
   @UseGuards(JwtAuthGuard)
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @ApiOperation({
     summary: 'Đổi mật khẩu',
     description:
-      'Sau khi đổi thành công, toàn bộ token cũ sẽ bị vô hiệu hóa. ' +
-      'Client phải xóa token và chuyển người dùng về trang đăng nhập.',
+      'Sau khi đổi thành công, toàn bộ token cũ sẽ bị vô hiệu hóa và cookie bị xoá. ' +
+      'Client chuyển người dùng về trang đăng nhập.',
   })
   @ApiResponse({
     status: 200,
@@ -177,11 +170,15 @@ export class AuthController {
       },
     },
   })
-  changePassword(
+  async changePassword(
     @CurrentUser() user: { id: number },
     @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.changePassword(user.id, dto);
+    const result = await this.authService.changePassword(user.id, dto);
+    // Token hiện tại đã bị vô hiệu (passwordChangedAt) → xoá luôn cookie
+    clearAuthCookie(res);
+    return result;
   }
 
   // ─── 4. QUÊN MẬT KHẨU – BƯỚC 1: Gửi OTP ──────────────────────────────────
@@ -278,7 +275,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('request-email-change')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @ApiOperation({
     summary: '[Email Change – Step 1] Gửi OTP về email hiện tại để xác thực',
     description: 'Gửi mã OTP 6 số về email hiện tại của tài khoản đang đăng nhập.',
@@ -329,7 +326,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('verify-email-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @ApiOperation({
     summary: '[Email Change – Step 2] Xác minh mã OTP 6 số',
     description: 'Xác minh mã OTP người dùng nhận được ở bước 1.',
@@ -383,7 +380,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('confirm-email-change')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @ApiOperation({
     summary: '[Email Change – Step 3] Nhập email mới và lưu vào hệ thống',
     description: 'Gửi kèm OTP đã xác minh ở bước 2 để bảo vệ endpoint này.',

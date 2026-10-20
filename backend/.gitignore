@@ -11,3 +11,6 @@ dist/
 
 # Test coverage
 coverage/
+
+# File doanh nghiệp tải lên khi đăng ký
+uploads/

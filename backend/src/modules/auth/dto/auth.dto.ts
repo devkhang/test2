@@ -7,9 +7,8 @@ import {
   IsEmail,
   Length,
   IsNumberString,
-  Matches,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional, ApiHideProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // ─── ĐĂNG NHẬP ───────────────────────────────────────────────────────────────
 export class LoginDto {
@@ -42,7 +41,11 @@ export class ChangePasswordDto {
   @IsString()
   currentPassword?: string;
 
-
+  // Trang /change-password của frontend gửi tên cũ `oldPassword` – nhận như currentPassword
+  @ApiPropertyOptional({ description: 'Tên khác của currentPassword', example: 'admin1234' })
+  @IsOptional()
+  @IsString()
+  oldPassword?: string;
 
   @ApiProperty({
     description: 'Mật khẩu mới (tối thiểu 8 ký tự)',
@@ -53,13 +56,13 @@ export class ChangePasswordDto {
   @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
   newPassword: string;
 
-  @ApiProperty({
-    description: 'Xác nhận mật khẩu mới',
+  @ApiPropertyOptional({
+    description: 'Xác nhận mật khẩu mới (không gửi thì bỏ qua bước so khớp)',
     example: 'admin123',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Vui lòng xác nhận mật khẩu mới' })
-  confirmNewPassword: string;
+  confirmNewPassword?: string;
 }
 
 // ─── QUÊN MẬT KHẨU – BƯỚC 1: Nhập email ─────────────────────────────────────
@@ -106,13 +109,13 @@ export class ResetPasswordDto {
   @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
   newPassword: string;
 
-  @ApiProperty({
-    description: 'Nhập lại mật khẩu mới để xác nhận',
+  @ApiPropertyOptional({
+    description: 'Nhập lại mật khẩu mới (không gửi thì bỏ qua bước so khớp)',
     example: 'NewPass@2024',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Vui lòng xác nhận mật khẩu mới' })
-  confirmNewPassword: string;
+  confirmNewPassword?: string;
 }
 
 // ─── EMAIL CHANGE – BƯỚC 1: Yêu cầu gửi OTP ─────────────────────────────────
