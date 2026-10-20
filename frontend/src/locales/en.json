@@ -33,7 +33,8 @@
     "passwordMismatch": "Passwords do not match",
     "passwordMin": "Password must be at least {{min}} characters",
     "hasAccount": "Already have an account?",
-    "success": "Registration successful, please log in"
+    "success": "Registration successful, please log in",
+    "submit": "Sign up"
   },
   "changePassword": {
     "title": "Change password",
@@ -78,7 +79,10 @@
     "notReceived": "Didn't receive the code?",
     "resend": "Resend",
     "submit": "Confirm",
-    "resendOtp": "Resend"
+    "resendOtp": "Resend",
+    "sendSuccess": "Verification code sent, please check your email",
+    "resetSuccess": "Password reset successfully, please log in",
+    "invalidOtp": "The OTP is 6 digits"
   },
   "menu": {
     "toggle": "Collapse / expand menu",

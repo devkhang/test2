@@ -33,7 +33,8 @@
     "passwordMismatch": "Mật khẩu nhập lại không khớp",
     "passwordMin": "Mật khẩu tối thiểu {{min}} ký tự",
     "hasAccount": "Đã có tài khoản?",
-    "success": "Đăng ký thành công, hãy đăng nhập"
+    "success": "Đăng ký thành công, hãy đăng nhập",
+    "submit": "Đăng ký"
   },
   "changePassword": {
     "title": "Đổi mật khẩu",
@@ -78,7 +79,10 @@
     "notReceived": "Không nhận được mã xác thực?",
     "resend": "Gửi lại",
     "resendOtp": "Gửi lại mã xác thực",
-    "submit": "Xác nhận"
+    "submit": "Xác nhận",
+    "sendSuccess": "Đã gửi mã xác thực, vui lòng kiểm tra email",
+    "resetSuccess": "Đặt lại mật khẩu thành công, vui lòng đăng nhập",
+    "invalidOtp": "Mã OTP gồm 6 chữ số"
   },
   "menu": {
     "toggle": "Thu gọn / mở menu",
