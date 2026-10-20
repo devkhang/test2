@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import type { Attachment } from 'nodemailer/lib/mailer/index.js';
+import { existsSync } from 'fs';
+import { basename } from 'path';
 
 export interface MailOptions {
   to: string;
@@ -8,7 +11,15 @@ export interface MailOptions {
   html: string;
   // Nội dung ngắn in ra console khi chưa cấu hình SMTP (vd. "OTP: 123456")
   devPreview?: string;
+  attachments?: Attachment[];
 }
+
+export interface MailLogo {
+  html: string;               // thẻ <img> (hoặc tên ứng dụng nếu chưa có logo)
+  attachments: Attachment[];  // logo nhúng kèm email (cid) – truyền vào send()
+}
+
+const LOGO_CID = 'mail-logo';
 
 @Injectable()
 export class MailService {
@@ -20,7 +31,34 @@ export class MailService {
     return this.configService.get<string>('APP_NAME', 'Hệ thống Quản lý Lao động');
   }
 
-  async send({ to, subject, html, devPreview }: MailOptions): Promise<void> {
+  /**
+   * Logo đầu email, ưu tiên:
+   * 1. File MAIL_LOGO_PATH (mặc định assets/mail-logo.png) – nhúng thẳng vào email, không cần host ảnh
+   * 2. MAIL_LOGO_URL – ảnh public trên mạng
+   * 3. Không có → hiện tên ứng dụng
+   */
+  logo(height = 56): MailLogo {
+    const path = this.configService.get<string>('MAIL_LOGO_PATH', 'assets/mail-logo.png');
+    if (existsSync(path)) {
+      return {
+        html: `<img src="cid:${LOGO_CID}" alt="${this.appName}" height="${height}" style="display:block;height:${height}px;" />`,
+        attachments: [{ filename: basename(path), path, cid: LOGO_CID }],
+      };
+    }
+    const url = this.configService.get<string>('MAIL_LOGO_URL');
+    if (url) {
+      return {
+        html: `<img src="${url}" alt="${this.appName}" height="${height}" style="display:block;height:${height}px;" />`,
+        attachments: [],
+      };
+    }
+    return {
+      html: `<span style="font-size:18px;font-weight:700;color:#1a73e8;">${this.appName}</span>`,
+      attachments: [],
+    };
+  }
+
+  async send({ to, subject, html, devPreview, attachments }: MailOptions): Promise<void> {
     const user = this.configService.get<string>('MAIL_USER');
     const pass = this.configService.get<string>('MAIL_PASS');
 
@@ -42,6 +80,7 @@ export class MailService {
       to,
       subject,
       html,
+      attachments,
     });
   }
 }

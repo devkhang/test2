@@ -350,7 +350,7 @@ export class AuthService {
 
   /**
    * Email quên mật khẩu – gửi OTP
-   * Template bao gồm: Logo, Lời chào (username), OTP, Thời gian hiệu lực
+   * Bố cục theo mẫu: Logo → "Xin chào, {họ tên}" → OTP → lưu ý thời hạn / bảo mật
    */
   private async sendForgotPasswordOtpEmail(
     email: string,
@@ -358,137 +358,60 @@ export class AuthService {
     fullName: string,
     otp: string,
   ): Promise<void> {
-    const appName = this.configService.get<string>('APP_NAME', 'Hệ thống Quản lý Lao động');
-    const logoUrl = this.configService.get<string>(
-      'MAIL_LOGO_URL',
-      'https://i.imgur.com/placeholder-logo.png',
-    );
-    // Thời gian hết hạn lấy từ hằng số – LUÔN khớp với logic backend
-    const expiryText = `${OTP_EXPIRY_MINUTES} phút`;
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-    const expiresAtFormatted = expiresAt.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh',
-    });
+    const appName = this.mailService.appName;
+    const logo = this.mailService.logo();
+    const esc = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
     await this.mailService.send({
       to: email,
-      subject: `[${appName}] Mã xác thực khôi phục mật khẩu`,
+      subject: `[${appName}] Mã OTP khôi phục mật khẩu`,
       devPreview: `OTP: ${otp}`,
+      attachments: logo.attachments,
       html: `
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Khôi phục mật khẩu</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 0;">
+<body style="margin:0;padding:24px 0;background-color:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-
-          <!-- HEADER / LOGO -->
+        <table width="560" cellpadding="0" cellspacing="0"
+               style="max-width:560px;background-color:#ffffff;border-radius:8px;padding:28px 32px;">
           <tr>
-            <td align="center"
-                style="background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);padding:32px 40px;">
-              <img src="${logoUrl}"
-                   alt="${appName}"
-                   height="60"
-                   style="display:block;max-width:240px;object-fit:contain;"
-                   onerror="this.style.display='none'" />
-              <p style="margin:12px 0 0;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.5px;">
-                ${appName}
+            <td style="padding-bottom:20px;">${logo.html}</td>
+          </tr>
+          <tr>
+            <td style="color:#111827;font-size:20px;font-weight:700;padding-bottom:16px;">
+              Xin chào, ${esc(fullName)}
+            </td>
+          </tr>
+          <tr>
+            <td style="color:#374151;font-size:14px;line-height:1.7;">
+              <p style="margin:0 0 12px;">
+                Bạn vừa yêu cầu khôi phục mật khẩu cho tài khoản
+                <strong>(${esc(username)})</strong>. Dưới đây là mã OTP của bạn:
+                <strong style="font-size:16px;color:#111827;letter-spacing:1px;">${otp}</strong>
+              </p>
+              <p style="margin:0 0 12px;">
+                <strong>Lưu ý quan trọng:</strong> Mã OTP có hiệu lực trong
+                <strong>${OTP_EXPIRY_MINUTES} phút</strong>.
+              </p>
+              <p style="margin:0 0 12px;">
+                Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên hỗ trợ.
+              </p>
+              <p style="margin:0;">
+                Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này.
               </p>
             </td>
           </tr>
-
-          <!-- BODY -->
-          <tr>
-            <td style="padding:40px 48px 32px;">
-
-              <!-- Tiêu đề -->
-              <h2 style="margin:0 0 8px;color:#1a1a2e;font-size:22px;font-weight:700;">
-                Khôi phục mật khẩu
-              </h2>
-              <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">
-                Yêu cầu đặt lại mật khẩu của bạn đã được nhận
-              </p>
-
-              <!-- Lời chào -->
-              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
-                Xin chào <strong style="color:#1a73e8;">${fullName}</strong>
-                (<span style="color:#6b7280;font-style:italic;">@${username}</span>),
-              </p>
-              <p style="margin:0 0 28px;color:#374151;font-size:15px;line-height:1.6;">
-                Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản của bạn.
-                Vui lòng sử dụng mã xác thực dưới đây để tiếp tục:
-              </p>
-
-              <!-- Khung OTP -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-                <tr>
-                  <td align="center"
-                      style="background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
-                             border:2px dashed #93c5fd;border-radius:12px;padding:28px;">
-                    <p style="margin:0 0 8px;color:#1e40af;font-size:13px;
-                               font-weight:600;letter-spacing:2px;text-transform:uppercase;">
-                      MÃ XÁC THỰC OTP
-                    </p>
-                    <p style="margin:0;color:#1a73e8;font-size:48px;font-weight:800;
-                               letter-spacing:12px;font-family:'Courier New',monospace;">
-                      ${otp}
-                    </p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Thông tin thời gian hiệu lực -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-                <tr>
-                  <td style="background-color:#fef3c7;border-left:4px solid #f59e0b;
-                             border-radius:0 8px 8px 0;padding:14px 16px;">
-                    <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
-                      ⏱️ Mã OTP có hiệu lực trong <strong>${expiryText}</strong>
-                      và sẽ hết hạn lúc <strong>${expiresAtFormatted}</strong>.
-                      Vui lòng không chia sẻ mã này với bất kỳ ai.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Hướng dẫn -->
-              <p style="margin:0 0 8px;color:#374151;font-size:14px;line-height:1.6;">
-                <strong>Các bước thực hiện:</strong>
-              </p>
-              <ol style="margin:0 0 28px;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;">
-                <li>Quay lại trang khôi phục mật khẩu</li>
-                <li>Nhập mã OTP: <strong>${otp}</strong></li>
-                <li>Nhập mật khẩu mới và xác nhận</li>
-                <li>Bấm <strong>"Khôi phục mật khẩu"</strong></li>
-              </ol>
-
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="background-color:#f9fafb;border-top:1px solid #e5e7eb;
-                       padding:24px 48px;text-align:center;">
-              <p style="margin:0 0 8px;color:#9ca3af;font-size:12px;line-height:1.6;">
-                Nếu bạn <strong>không</strong> thực hiện yêu cầu này, vui lòng bỏ qua email
-                và liên hệ quản trị viên ngay để bảo mật tài khoản.
-              </p>
-              <p style="margin:0;color:#d1d5db;font-size:11px;">
-                © ${new Date().getFullYear()} ${appName}. Email tự động, vui lòng không trả lời.
-              </p>
-            </td>
-          </tr>
-
         </table>
+        <p style="margin:16px 0 0;color:#9ca3af;font-size:11px;">
+          © ${new Date().getFullYear()} ${appName}. Email tự động, vui lòng không trả lời.
+        </p>
       </td>
     </tr>
   </table>
