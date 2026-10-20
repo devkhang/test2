@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { Attachment } from 'nodemailer/lib/mailer/index.js';
 import { existsSync } from 'fs';
-import { basename } from 'path';
+import { basename, extname } from 'path';
 
 export interface MailOptions {
   to: string;
@@ -19,7 +19,15 @@ export interface MailLogo {
   attachments: Attachment[];  // logo nhúng kèm email (cid) – truyền vào send()
 }
 
-const LOGO_CID = 'mail-logo';
+// Dạng "ten@mien" – Gmail ghép ảnh inline với <img src="cid:..."> ổn định nhất
+const LOGO_CID = 'mail-logo@labor-system';
+
+const IMAGE_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+};
 
 @Injectable()
 export class MailService {
@@ -33,16 +41,18 @@ export class MailService {
 
   /**
    * Logo đầu email, ưu tiên:
-   * 1. File MAIL_LOGO_PATH (mặc định assets/mail-logo.png) – nhúng thẳng vào email, không cần host ảnh
+   * 1. File MAIL_LOGO_PATH (mặc định assets/mail-logo.png; png/jpg/gif) – nhúng thẳng vào email, không cần host ảnh
    * 2. MAIL_LOGO_URL – ảnh public trên mạng
    * 3. Không có → hiện tên ứng dụng
    */
   logo(height = 56): MailLogo {
     const path = this.configService.get<string>('MAIL_LOGO_PATH', 'assets/mail-logo.png');
-    if (existsSync(path)) {
+    const contentType = IMAGE_TYPES[extname(path).toLowerCase()];
+    if (contentType && existsSync(path)) {
       return {
         html: `<img src="cid:${LOGO_CID}" alt="${this.appName}" height="${height}" style="display:block;height:${height}px;" />`,
-        attachments: [{ filename: basename(path), path, cid: LOGO_CID }],
+        // inline + contentType rõ ràng: ảnh hiện trong nội dung, không bị liệt kê thành tệp đính kèm
+        attachments: [{ filename: basename(path), path, cid: LOGO_CID, contentType, contentDisposition: 'inline' }],
       };
     }
     const url = this.configService.get<string>('MAIL_LOGO_URL');
